@@ -1,10 +1,12 @@
 package google
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/render"
+	"github.com/magnm/lcm/config"
 )
 
 func instance(w http.ResponseWriter, r *http.Request) {
@@ -19,7 +21,7 @@ func instance(w http.ResponseWriter, r *http.Request) {
 }
 
 func instanceHostname(w http.ResponseWriter, r *http.Request) {
-	render.PlainText(w, r, "node0.proj.local")
+	render.PlainText(w, r, fmt.Sprintf("node0.c.%s.internal", config.Current.ProjectId))
 }
 
 func instanceId(w http.ResponseWriter, r *http.Request) {
@@ -44,7 +46,7 @@ func instanceClusterLocation(w http.ResponseWriter, r *http.Request) {
 }
 
 func instanceClusterName(w http.ResponseWriter, r *http.Request) {
-	render.PlainText(w, r, "proj")
+	render.PlainText(w, r, "dev-cluster")
 }
 
 func instanceClusterUid(w http.ResponseWriter, r *http.Request) {

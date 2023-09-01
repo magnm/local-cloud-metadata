@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/render"
+	"github.com/magnm/lcm/config"
 )
 
 func project(w http.ResponseWriter, r *http.Request) {
@@ -16,7 +17,7 @@ func project(w http.ResponseWriter, r *http.Request) {
 }
 
 func projectId(w http.ResponseWriter, r *http.Request) {
-	render.PlainText(w, r, "ush-name")
+	render.PlainText(w, r, config.Current.ProjectId)
 }
 
 func projectNumericId(w http.ResponseWriter, r *http.Request) {

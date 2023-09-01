@@ -9,21 +9,34 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/caarlos0/env/v9"
+	"github.com/go-chi/chi"
+	"github.com/magnm/lcm/config"
 	"github.com/magnm/lcm/pkg/routes/google"
+	"golang.org/x/exp/slog"
 )
 
 // Run starts a chi http server
 func Run() {
-	// Create a new chi router
-	r := google.Routes()
+	cfg := config.Config{}
+	if err := env.Parse(&cfg); err != nil {
+		slog.Error("failed to parse config", "err", err)
+		os.Exit(1)
+	}
+	config.Current = cfg
+
+	var r *chi.Mux
+	switch cfg.Type {
+	case config.GoogleMetadata:
+		r = google.Routes()
+	default:
+		slog.Error("unknown metadata type", "type", cfg.Type)
+		os.Exit(1)
+	}
 
 	// Create a new http server
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
 	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%s", port),
+		Addr:         fmt.Sprintf(":%s", cfg.Port),
 		Handler:      r,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
@@ -35,7 +48,7 @@ func Run() {
 
 	// Start the http server
 	go func() {
-		fmt.Printf("Server listening on port %s\n", port)
+		fmt.Printf("Server listening on port %s\n", cfg.Port)
 		if err := srv.ListenAndServe(); err != nil {
 			fmt.Printf("Server error: %s\n", err)
 		}
