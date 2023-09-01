@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi"
-	"github.com/go-chi/render"
 	"github.com/samber/lo"
 )
 
@@ -17,7 +16,7 @@ func serviceAccounts(w http.ResponseWriter, r *http.Request) {
 	accountFolders := lo.Map(accounts, func(acc string, i int) string {
 		return acc + "/"
 	})
-	render.PlainText(w, r, strings.Join(accountFolders, "\n"))
+	writeText(w, r, strings.Join(accountFolders, "\n"))
 }
 
 func serviceAccount(w http.ResponseWriter, r *http.Request) {
@@ -28,20 +27,25 @@ func serviceAccount(w http.ResponseWriter, r *http.Request) {
 		"scopes",
 		"token",
 	}
-	render.PlainText(w, r, strings.Join(paths, "\n"))
+	writeText(w, r, strings.Join(paths, "\n"))
 }
 
 func serviceAccountProp(w http.ResponseWriter, r *http.Request) {
 	switch chi.URLParam(r, "key") {
 	case "aliases":
-		render.PlainText(w, r, "")
+		writeText(w, r, "default")
 	case "email":
-		render.PlainText(w, r, "")
+		writeText(w, r, "account email")
 	case "identity":
-		render.PlainText(w, r, "")
+		audience := r.URL.Query().Get("audience")
+		if audience == "" {
+			http.Error(w, "non-empty audience parameter required", http.StatusBadRequest)
+			return
+		}
+		writeText(w, r, "token-using-audience-here")
 	case "scopes":
-		render.PlainText(w, r, "")
+		writeText(w, r, "https://www.googleapis.com/auth/cloud-platform")
 	case "token":
-		render.PlainText(w, r, "")
+		writeText(w, r, "token-here")
 	}
 }

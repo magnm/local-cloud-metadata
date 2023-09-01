@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi"
+	"github.com/go-chi/render"
 	"github.com/samber/lo"
 )
 
@@ -59,6 +60,17 @@ func verifyRequestHeaders(next http.Handler) http.Handler {
 			return
 		}
 
+		w.Header().Set("Metadata-Flavor", "Google")
+		w.Header().Set("Server", "GKE Metadata Server")
+
 		next.ServeHTTP(w, r)
 	})
+}
+
+func writeText(w http.ResponseWriter, r *http.Request, text string) {
+	w.Header().Set("Content-Type", "application/text")
+	if status, ok := r.Context().Value(render.StatusCtxKey).(int); ok {
+		w.WriteHeader(status)
+	}
+	w.Write([]byte(text)) //nolint:errcheck
 }

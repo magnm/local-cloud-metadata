@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi"
-	"github.com/go-chi/render"
 )
 
 func computeMetadataRoutes(r chi.Router) {
@@ -37,5 +36,5 @@ func metadataIndex(w http.ResponseWriter, r *http.Request) {
 		"project/",
 		"instance/",
 	}
-	render.PlainText(w, r, strings.Join(paths, "\n"))
+	writeText(w, r, strings.Join(paths, "\n"))
 }
