@@ -27,7 +27,7 @@ func authentication() option.ClientOption {
 	if config.Current.CloudKeyfile != "" {
 		return option.WithCredentialsFile(config.Current.CloudKeyfile)
 	}
-	return nil
+	return option.WithTelemetryDisabled()
 }
 
 func GetProject(id string) *resourcemanagerpb.Project {
