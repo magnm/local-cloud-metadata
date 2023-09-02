@@ -28,7 +28,7 @@ func computeMetadataRoutes(r chi.Router) {
 	r.Get("/instance/service-accounts/", serviceAccounts)
 	r.Get("/instance/service-accounts/{acc}", redirectToKey("/instance/service-accounts/{acc}/", []string{"acc"}))
 	r.Get("/instance/service-accounts/{acc}/", serviceAccount)
-	r.Get("/instance/service-accounts/{acc}/{key}", serviceAccountProp)
+	r.Get("/instance/service-accounts/{acc}/{key}", serviceAccountAttr)
 }
 
 func metadataIndex(w http.ResponseWriter, r *http.Request) {

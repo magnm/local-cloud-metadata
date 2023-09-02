@@ -43,7 +43,7 @@ func serviceAccount(w http.ResponseWriter, r *http.Request) {
 	writeText(w, r, strings.Join(paths, "\n"))
 }
 
-func serviceAccountProp(w http.ResponseWriter, r *http.Request) {
+func serviceAccountAttr(w http.ResponseWriter, r *http.Request) {
 	email := chi.URLParam(r, "acc")
 
 	// Ensure the email requested is the one currently bound to the pod
@@ -60,7 +60,7 @@ func serviceAccountProp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	key := chi.URLParam(r, "key")
-	slog.Debug("service account key requested", "email", accountEmail, "key", key)
+	slog.Debug("service account attr requested", "email", accountEmail, "key", key)
 
 	switch key {
 	case "aliases":
