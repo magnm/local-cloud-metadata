@@ -9,7 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func patchesForPod(pod *corev1.Pod) ([]kubernetes.PatchOperation, error) {
+func patchesForPod(pod *corev1.Pod, dryRun bool) ([]kubernetes.PatchOperation, error) {
 	var patches []kubernetes.PatchOperation
 
 	// Check if we should add imagePullSecret
@@ -27,7 +27,7 @@ func patchesForPod(pod *corev1.Pod) ([]kubernetes.PatchOperation, error) {
 		switch config.Current.Type {
 		case config.GoogleMetadata:
 			if kubegoogle.ShouldAddImagePullSecret(image) {
-				secretReference, err := kubegoogle.PullSecretForImage(image, pod.Namespace)
+				secretReference, err := kubegoogle.PullSecretForImage(image, pod.Namespace, dryRun)
 				if err != nil {
 					slog.Error("failed to create image pull secret", "err", err)
 					return nil, err

@@ -21,11 +21,15 @@ type PatchOperation struct {
 
 var deserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
 
-func DecodePodMutationRequest(r *http.Request) (*corev1.Pod, error) {
+/**
+ * DecodePodMutationRequest decodes a pod mutation request from the http request body.
+ * Returns the pod, a boolean indicating if the request is a dry run, and an error if any.
+ */
+func DecodePodMutationRequest(r *http.Request) (*corev1.Pod, bool, error) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		slog.Error("failed to read request body", "err", err)
-		return nil, err
+		return nil, false, err
 	}
 
 	var admissionReview *admissionv1.AdmissionReview
@@ -33,21 +37,23 @@ func DecodePodMutationRequest(r *http.Request) (*corev1.Pod, error) {
 	_, _, err = deserializer.Decode(body, nil, admissionReview)
 	if err != nil {
 		slog.Error("failed to decode admission request", "err", err)
-		return nil, err
+		return nil, false, err
 	} else if admissionReview.Request == nil {
 		slog.Error("admission request is nil")
-		return nil, errors.New("admission request is nil")
+		return nil, false, errors.New("admission request is nil")
 	}
 	slog.Debug("admission review", "review", admissionReview)
+
+	dryRun := admissionReview.Request.DryRun
 
 	var pod corev1.Pod
 	err = json.Unmarshal(admissionReview.Request.Object.Raw, &pod)
 	if err != nil {
 		slog.Error("failed to decode pod resource", "err", err)
-		return nil, err
+		return nil, false, err
 	}
 
-	return &pod, nil
+	return &pod, *dryRun, nil
 }
 
 func EncodeMutationPatches(patches []PatchOperation) (*admissionv1.AdmissionReview, error) {

@@ -44,14 +44,16 @@ func ShouldAddImagePullSecret(image reference.Named) bool {
 		strings.Contains(image.Name(), "docker.pkg.dev/")
 }
 
-func PullSecretForImage(image reference.Named, namespace string) (*corev1.LocalObjectReference, error) {
+func PullSecretForImage(image reference.Named, namespace string, dryRun bool) (*corev1.LocalObjectReference, error) {
 	domain := reference.Domain(image)
 	secretName := fmt.Sprintf("registry-%s", strings.ReplaceAll(domain, ".", "-"))
 
-	registryAuth := createRegistryAuth(domain)
-	err := kubernetes.CreateImagePullSecret(secretName, namespace, registryAuth)
-	if err != nil {
-		return nil, err
+	registryAuth := constructRegistryAuth(domain)
+	if !dryRun {
+		err := kubernetes.CreateImagePullSecret(secretName, namespace, registryAuth)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &corev1.LocalObjectReference{
@@ -59,7 +61,7 @@ func PullSecretForImage(image reference.Named, namespace string) (*corev1.LocalO
 	}, nil
 }
 
-func createRegistryAuth(domain string) kubernetes.RegistryAuth {
+func constructRegistryAuth(domain string) kubernetes.RegistryAuth {
 	username := "oauth2accesstoken"
 	token := googleclient.GetMainAccountAccessToken()
 	encoded := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", username, token)))

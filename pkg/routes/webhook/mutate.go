@@ -17,14 +17,14 @@ func Routes() *chi.Mux {
 }
 
 func handleRequest(w http.ResponseWriter, r *http.Request) {
-	podRequest, err := kubernetes.DecodePodMutationRequest(r)
+	podRequest, dryRun, err := kubernetes.DecodePodMutationRequest(r)
 	if err != nil {
 		slog.Error("failed to decode pod mutation request", "err", err)
 		http.Error(w, "failed to decode pod mutation request", http.StatusBadRequest)
 		return
 	}
 
-	patches, err := patchesForPod(podRequest)
+	patches, err := patchesForPod(podRequest, dryRun)
 	if err != nil {
 		slog.Error("failed to generate patches for pod", "err", err)
 		http.Error(w, "failed to generate patches for pod", http.StatusInternalServerError)
