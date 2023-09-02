@@ -5,10 +5,27 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi"
+	"github.com/magnm/lcm/config"
+	"github.com/magnm/lcm/pkg/kubernetes"
 	"github.com/samber/lo"
+	"golang.org/x/exp/slog"
 )
 
 func serviceAccounts(w http.ResponseWriter, r *http.Request) {
+	pod, err := kubernetes.CallingPod(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	ksa := kubernetes.ServiceAccountForPod(pod)
+
+	switch config.Current.KsaResolver {
+	case config.KsaBindingResolverCRD:
+		slog.Debug("using CRD to resolve ksa binding", "ksa", ksa)
+	case config.KsaBindingResolverCloud:
+		slog.Debug("using cloud to resolve ksa binding", "ksa", ksa)
+	}
+
 	accounts := []string{
 		"default",
 		"another",
@@ -31,6 +48,8 @@ func serviceAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func serviceAccountProp(w http.ResponseWriter, r *http.Request) {
+	email := chi.URLParam(r, "acc")
+
 	switch chi.URLParam(r, "key") {
 	case "aliases":
 		writeText(w, r, "default")

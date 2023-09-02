@@ -16,11 +16,11 @@ const (
 )
 
 type Config struct {
-	Port         string       `env:"PORT" envDefault:"8080"`
-	Type         MetadataType `env:"TYPE" envDefault:"google"`
-	ProjectId    string       `env:"PROJECT_ID,notEmpty"`
-	CloudKeyfile string       `env:"CLOUD_KEYFILE"`
-	KsaBinding   string       `env:"KSA_BINDING" envDefault:"crd"`
+	Port         string             `env:"PORT" envDefault:"8080"`
+	Type         MetadataType       `env:"TYPE" envDefault:"google"`
+	ProjectId    string             `env:"PROJECT_ID,notEmpty"`
+	CloudKeyfile string             `env:"CLOUD_KEYFILE"`
+	KsaResolver  KsaBindingResolver `env:"KSA_RESOLVER" envDefault:"crd"`
 }
 
 // Initialised by server/run.go

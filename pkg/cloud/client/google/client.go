@@ -18,6 +18,7 @@ func authentication() option.ClientOption {
 }
 
 func GetProject(id string) *resourcemanagerpb.Project {
+	slog.Debug("getting google project", "id", id)
 	ctx := context.Background()
 	client, err := resourcemanager.NewProjectsClient(ctx, authentication())
 	if err != nil {
@@ -31,6 +32,11 @@ func GetProject(id string) *resourcemanagerpb.Project {
 	})
 
 	project, _ := projectIterator.Next()
+	if project == nil {
+		slog.Error("failed to get project", "id", id)
+	} else {
+		slog.Debug("got project", "id", id, "name", project.Name)
+	}
 
 	return project
 }
