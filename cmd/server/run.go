@@ -10,9 +10,8 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v9"
-	"github.com/go-chi/chi"
 	"github.com/magnm/lcm/config"
-	"github.com/magnm/lcm/pkg/routes/google"
+	"github.com/magnm/lcm/pkg/routes"
 	"golang.org/x/exp/slog"
 )
 
@@ -25,23 +24,15 @@ func Run() {
 	}
 	config.Current = cfg
 
-	var r *chi.Mux
-	switch cfg.Type {
-	case config.GoogleMetadata:
-		r = google.Routes()
-	default:
-		slog.Error("unknown metadata type", "type", cfg.Type)
-		os.Exit(1)
-	}
+	router := routes.MainRouter(cfg)
 
 	errChan := make(chan error, 1)
-
 	stopChan := make(chan os.Signal, 1)
 	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%s", cfg.Port),
-		Handler:      r,
+		Handler:      router,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
@@ -59,7 +50,7 @@ func Run() {
 	if cfg.TlsCert != "" && cfg.TlsKey != "" {
 		tlsSrv := &http.Server{
 			Addr:         fmt.Sprintf(":%s", cfg.TlsPort),
-			Handler:      r,
+			Handler:      router,
 			ReadTimeout:  10 * time.Second,
 			WriteTimeout: 10 * time.Second,
 		}

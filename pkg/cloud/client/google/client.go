@@ -13,6 +13,7 @@ import (
 	durationpb "github.com/golang/protobuf/ptypes/duration"
 	"github.com/magnm/lcm/config"
 	"golang.org/x/exp/slog"
+	google "golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 )
 
@@ -82,6 +83,22 @@ func ValidateKsaGsaBinding(ksaBinding string, gsa string) bool {
 	slog.Warn("invalid ksa gsa binding", "ksaBinding", ksaBinding, "gsa", gsa)
 
 	return false
+}
+
+func GetMainAccountAccessToken() string {
+	slog.Debug("getting main account access token")
+	ctx := context.Background()
+	credentials, err := google.FindDefaultCredentials(ctx, TokenScopes...)
+	if err != nil {
+		slog.Error("failed to get default credentials", "err", err)
+		return ""
+	}
+	token, err := credentials.TokenSource.Token()
+	if err != nil {
+		slog.Error("failed to get credentials token", "err", err)
+		return ""
+	}
+	return token.AccessToken
 }
 
 func GetServiceAccountAccessToken(email string) string {

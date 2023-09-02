@@ -1,0 +1,37 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: local-cloud-metadata
+  annotations:
+    cert-manager.io/inject-ca-from: default/lcm-webhook
+webhooks:
+- name: lc-metadata.default.svc
+  admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: lc-metadata
+      namespace: default
+      path: /webhook/mutate
+      port: 443
+  rules:
+  - operations: [ "CREATE", "UPDATE" ]
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["pods"]
+  sideEffects: NoneOnDryRun
+
+---
+
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: lcm-webook
+  namespace: default
+spec:
+  secretName: lcm-webhook
+  dnsNames:
+  - lc-metadata.default.svc
+  - lc-metadata.default.svc.cluster.local
+  issuerRef:
+    name: letsencrypt

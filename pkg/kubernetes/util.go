@@ -2,6 +2,8 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -14,6 +16,17 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
+
+type RegistryAuth struct {
+	Auths map[string]RegistryAuthEntry `json:"auths"`
+}
+
+type RegistryAuthEntry struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Email    string `json:"email"`
+	Auth     string `json:"auth"`
+}
 
 var podCache = map[string]*corev1.Pod{}
 
@@ -87,4 +100,35 @@ func FindCustomResource[T any](group string, version string, resource string, na
 		converted = append(converted, binding)
 	}
 	return converted, nil
+}
+
+func CreateSecret(secret *corev1.Secret) error {
+	client, err := kubeclient.GetKubernetesClient()
+	if err != nil {
+		return err
+	}
+
+	_, err = client.CoreV1().Secrets(secret.Namespace).Create(context.Background(), secret, metav1.CreateOptions{})
+	return err
+}
+
+func CreateImagePullSecret(name string, namespace string, registryAuth RegistryAuth) error {
+	jsonEncoded, err := json.Marshal(registryAuth)
+	if err != nil {
+		return err
+	}
+	base64Encoded := base64.StdEncoding.EncodeToString(jsonEncoded)
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Type: corev1.SecretTypeDockerConfigJson,
+		Data: map[string][]byte{
+			".dockerconfigjson": []byte(base64Encoded),
+		},
+	}
+
+	return CreateSecret(secret)
 }

@@ -9,6 +9,7 @@ require (
 	github.com/go-chi/render v1.0.3
 	github.com/golang/protobuf v1.5.3
 	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
+	golang.org/x/oauth2 v0.8.0
 	google.golang.org/api v0.126.0
 	k8s.io/api v0.28.1
 	k8s.io/apimachinery v0.28.1
@@ -41,11 +42,11 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.11.0 // indirect
 	golang.org/x/net v0.13.0 // indirect
-	golang.org/x/oauth2 v0.8.0 // indirect
 	golang.org/x/sys v0.11.0 // indirect
 	golang.org/x/term v0.10.0 // indirect
 	golang.org/x/text v0.11.0 // indirect
@@ -70,6 +71,7 @@ require (
 require (
 	github.com/ajg/form v1.5.1 // indirect
 	github.com/caarlos0/env/v9 v9.0.0
+	github.com/distribution/reference v0.5.0
 	github.com/samber/lo v1.38.1
 	k8s.io/client-go v0.28.1
 )
