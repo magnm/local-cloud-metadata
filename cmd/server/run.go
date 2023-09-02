@@ -34,7 +34,11 @@ func Run() {
 		os.Exit(1)
 	}
 
-	// Create a new http server
+	errChan := make(chan error, 1)
+
+	stopChan := make(chan os.Signal, 1)
+	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
+
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%s", cfg.Port),
 		Handler:      r,
@@ -42,21 +46,39 @@ func Run() {
 		WriteTimeout: 10 * time.Second,
 	}
 
-	// Create a channel to listen for OS signals
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-
 	// Start the http server
 	go func() {
-		fmt.Printf("Server listening on port %s\n", cfg.Port)
+		fmt.Printf("http server listening on port %s\n", cfg.Port)
 		if err := srv.ListenAndServe(); err != nil {
-			fmt.Printf("Server error: %s\n", err)
+			fmt.Printf("server error: %s\n", err)
+			errChan <- err
 		}
 	}()
 
-	// Wait for the OS signal to stop the server
-	<-stop
-	fmt.Println("Server stopped")
+	// Start https server if cert and key are provided
+	if cfg.TlsCert != "" && cfg.TlsKey != "" {
+		tlsSrv := &http.Server{
+			Addr:         fmt.Sprintf(":%s", cfg.TlsPort),
+			Handler:      r,
+			ReadTimeout:  10 * time.Second,
+			WriteTimeout: 10 * time.Second,
+		}
+		go func() {
+			fmt.Printf("https server listening on port %s\n", cfg.TlsPort)
+			if err := tlsSrv.ListenAndServeTLS(cfg.TlsCert, cfg.TlsKey); err != nil {
+				fmt.Printf("Server error: %s\n", err)
+				errChan <- err
+			}
+		}()
+	}
+
+	select {
+	case err := <-errChan:
+		slog.Error("server error", "err", err)
+		os.Exit(1)
+	case <-stopChan:
+		fmt.Println("server stopping")
+	}
 
 	// Give the server 5 seconds to shutdown gracefully
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

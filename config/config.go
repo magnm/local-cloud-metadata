@@ -17,6 +17,9 @@ const (
 
 type Config struct {
 	Port         string             `env:"PORT" envDefault:"8080"`
+	TlsPort      string             `env:"TLS_PORT" envDefault:"8443"`
+	TlsCert      string             `env:"TLS_CERT"`
+	TlsKey       string             `env:"TLS_KEY"`
 	Type         MetadataType       `env:"TYPE" envDefault:"google"`
 	ProjectId    string             `env:"PROJECT_ID,notEmpty"`
 	CloudKeyfile string             `env:"CLOUD_KEYFILE"`
