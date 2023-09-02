@@ -3,9 +3,11 @@ module github.com/magnm/lcm
 go 1.21
 
 require (
+	cloud.google.com/go/iam v1.1.2
 	cloud.google.com/go/resourcemanager v1.9.1
 	github.com/go-chi/chi v1.5.4
 	github.com/go-chi/render v1.0.3
+	github.com/golang/protobuf v1.5.3
 	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
 	google.golang.org/api v0.126.0
 	k8s.io/api v0.28.1
@@ -16,7 +18,6 @@ require (
 	cloud.google.com/go v0.110.2 // indirect
 	cloud.google.com/go/compute v1.19.3 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
-	cloud.google.com/go/iam v1.1.0 // indirect
 	cloud.google.com/go/longrunning v0.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
@@ -26,7 +27,6 @@ require (
 	github.com/go-openapi/swag v0.22.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect

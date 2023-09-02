@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/magnm/lcm/config"
+	googleclient "github.com/magnm/lcm/pkg/cloud/client/google"
 	"github.com/magnm/lcm/pkg/kubernetes"
 	kubegoogle "github.com/magnm/lcm/pkg/kubernetes/google"
 	"github.com/samber/lo"
@@ -73,11 +74,21 @@ func serviceAccountAttr(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "non-empty audience parameter required", http.StatusBadRequest)
 			return
 		}
-		writeText(w, r, "token-using-audience-here")
+		token := googleclient.GetServiceAccountIdentityToken(accountEmail, audience)
+		if token == "" {
+			http.Error(w, "failed to get identity token", http.StatusInternalServerError)
+			return
+		}
+		writeText(w, r, token)
 	case "scopes":
-		writeText(w, r, "https://www.googleapis.com/auth/cloud-platform")
+		writeText(w, r, strings.Join(googleclient.TokenScopes, ","))
 	case "token":
-		writeText(w, r, "token-here")
+		token := googleclient.GetServiceAccountAccessToken(accountEmail)
+		if token == "" {
+			http.Error(w, "failed to get access token", http.StatusInternalServerError)
+			return
+		}
+		writeText(w, r, token)
 	}
 }
 
