@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/magnm/lcm/config"
+	googleclient "github.com/magnm/lcm/pkg/cloud/client/google"
 )
 
 func instance(w http.ResponseWriter, r *http.Request) {
@@ -28,7 +29,12 @@ func instanceId(w http.ResponseWriter, r *http.Request) {
 }
 
 func instanceZone(w http.ResponseWriter, r *http.Request) {
-	writeText(w, r, "projects/1234567890/zones/eu-west1-d")
+	project := googleclient.GetProject(config.Current.ProjectId)
+	if project == nil {
+		http.Error(w, "failed to get project", http.StatusInternalServerError)
+		return
+	}
+	writeText(w, r, project.Name+"/zones/eu-west1-d")
 }
 
 func instanceAttributes(w http.ResponseWriter, r *http.Request) {
@@ -49,5 +55,5 @@ func instanceClusterName(w http.ResponseWriter, r *http.Request) {
 }
 
 func instanceClusterUid(w http.ResponseWriter, r *http.Request) {
-	writeText(w, r, "1234567890")
+	writeText(w, r, "9876543210")
 }
