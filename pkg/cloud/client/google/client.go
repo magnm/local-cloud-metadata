@@ -3,6 +3,9 @@ package google
 import (
 	"context"
 
+	"cloud.google.com/go/iam"
+	iamadmin "cloud.google.com/go/iam/admin/apiv1"
+	iampb "cloud.google.com/go/iam/apiv1/iampb"
 	iamcredentials "cloud.google.com/go/iam/credentials/apiv1"
 	iamcredentialspb "cloud.google.com/go/iam/credentials/apiv1/credentialspb"
 	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
@@ -16,6 +19,8 @@ import (
 var TokenScopes = []string{
 	"https://www.googleapis.com/auth/cloud-platform",
 }
+
+var IdentityWorkloadRole = "roles/iam.workloadIdentityUser"
 
 func authentication() option.ClientOption {
 	if config.Current.CloudKeyfile != "" {
@@ -46,6 +51,37 @@ func GetProject(id string) *resourcemanagerpb.Project {
 	}
 
 	return project
+}
+
+func ValidateKsaGsaBinding(ksaBinding string, gsa string) bool {
+	slog.Debug("validating ksa gsa binding", "ksaBinding", ksaBinding, "gsa", gsa)
+	ctx := context.Background()
+
+	client, err := iamadmin.NewIamClient(ctx, authentication())
+	if err != nil {
+		slog.Error("failed to create iamadmin client", "err", err)
+		return false
+	}
+	defer client.Close()
+
+	policy, err := client.GetIamPolicy(ctx, &iampb.GetIamPolicyRequest{
+		Resource: "projects/-/serviceAccounts/" + gsa,
+	})
+	if err != nil {
+		slog.Error("failed to get iam policy", "err", err)
+		return false
+	}
+
+	for _, member := range policy.Members(iam.RoleName(IdentityWorkloadRole)) {
+		if member == ksaBinding {
+			slog.Debug("validated ksa gsa binding", "ksaBinding", ksaBinding, "gsa", gsa)
+			return true
+		}
+	}
+
+	slog.Warn("invalid ksa gsa binding", "ksaBinding", ksaBinding, "gsa", gsa)
+
+	return false
 }
 
 func GetServiceAccountAccessToken(email string) string {

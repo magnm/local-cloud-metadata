@@ -103,18 +103,24 @@ func serviceAccountForPod(w http.ResponseWriter, r *http.Request) string {
 		return email
 	}
 
-	ksa := kubernetes.ServiceAccountForPod(pod)
+	ksa, err := kubernetes.ServiceAccountForPod(pod)
+	if err != nil {
+		slog.Error("failed to get service account for pod", "err", err)
+		return ""
+	}
+
 	var email string
 
 	switch config.Current.KsaResolver {
-	case config.KsaBindingResolverCRD:
-		slog.Debug("using CRD to resolve ksa binding", "ksa", ksa)
-		email := kubegoogle.GetGsaForKsa(ksa, pod.Namespace)
+	case config.KsaBindingResolverAnnotation:
+		slog.Debug("using annotation to resolve ksa binding", "ksa", ksa)
+
+		email := kubegoogle.GetGsaForKsa(ksa)
 		if email == "" {
 			slog.Error("no google service account binding found for ksa", "ksa", ksa)
 		}
-	case config.KsaBindingResolverCloud:
-		slog.Debug("using cloud to resolve ksa binding", "ksa", ksa)
+	case config.KsaBindingResolverCRD:
+		slog.Error("using CRD to resolve ksa binding is not implemented", "ksa", ksa)
 	}
 
 	if email != "" {

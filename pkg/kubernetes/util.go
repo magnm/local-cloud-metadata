@@ -47,8 +47,18 @@ func CallingPod(r *http.Request) (*corev1.Pod, error) {
 	return &pod, nil
 }
 
-func ServiceAccountForPod(pod *corev1.Pod) string {
-	return pod.Spec.ServiceAccountName
+func ServiceAccountForPod(pod *corev1.Pod) (*corev1.ServiceAccount, error) {
+	name := pod.Spec.ServiceAccountName
+	if name == "" {
+		name = "default"
+	}
+
+	client, err := kubeclient.GetKubernetesClient()
+	if err != nil {
+		return nil, err
+	}
+
+	return client.CoreV1().ServiceAccounts(pod.Namespace).Get(context.Background(), name, metav1.GetOptions{})
 }
 
 func FindCustomResource[T any](group string, version string, resource string, namespace string) ([]T, error) {

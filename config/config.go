@@ -9,10 +9,10 @@ const (
 type KsaBindingResolver string
 
 const (
+	// KsaBindingResolverAnnotation means finding the cloud service account by looking at the annotations of the KSA.
+	KsaBindingResolverAnnotation KsaBindingResolver = "annotation"
 	// KsaBindingResolverCRD means using an in-cluster CRD to resolve the cloud service account bound to the KSA.
 	KsaBindingResolverCRD KsaBindingResolver = "crd"
-	// KsaBindingResolverCloud means finding the cloud service account by querying the cloud's IAM policy.
-	KsaBindingResolverCloud KsaBindingResolver = "cloud"
 )
 
 type Config struct {
@@ -20,7 +20,7 @@ type Config struct {
 	Type         MetadataType       `env:"TYPE" envDefault:"google"`
 	ProjectId    string             `env:"PROJECT_ID,notEmpty"`
 	CloudKeyfile string             `env:"CLOUD_KEYFILE"`
-	KsaResolver  KsaBindingResolver `env:"KSA_RESOLVER" envDefault:"crd"`
+	KsaResolver  KsaBindingResolver `env:"KSA_RESOLVER" envDefault:"annotation"`
 }
 
 // Initialised by server/run.go
