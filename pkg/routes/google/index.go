@@ -11,11 +11,15 @@ import (
 func Routes() *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(verifyRequestHeaders)
-	r.Get("/", util.RedirectTo("/computeMetadata/v1/"))
+	r.Get("/", index)
 	r.Get("/computeMetadata", util.RedirectTo("/computeMetadata/v1/"))
 	r.Get("/computeMetadata/v1", util.RedirectTo("/computeMetadata/v1/"))
 	r.Route("/computeMetadata/v1/", computeMetadataRoutes)
 	return r
+}
+
+func index(w http.ResponseWriter, r *http.Request) {
+	writeText(w, r, "computeMetadata/")
 }
 
 func verifyRequestHeaders(next http.Handler) http.Handler {
