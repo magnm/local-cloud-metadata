@@ -1,6 +1,8 @@
 package webhook
 
 import (
+	"fmt"
+
 	"github.com/distribution/reference"
 	"github.com/magnm/lcm/config"
 	"github.com/magnm/lcm/pkg/kubernetes"
@@ -13,7 +15,7 @@ func patchesForPod(pod *corev1.Pod, dryRun bool) ([]kubernetes.PatchOperation, e
 	var patches []kubernetes.PatchOperation
 
 	// Check if we should add imagePullSecret
-	for _, container := range pod.Spec.Containers {
+	for i, container := range pod.Spec.Containers {
 		if container.ImagePullPolicy == corev1.PullNever {
 			continue
 		}
@@ -46,6 +48,30 @@ func patchesForPod(pod *corev1.Pod, dryRun bool) ([]kubernetes.PatchOperation, e
 						Value: secretReference.Name,
 					})
 				}
+			}
+
+			// Add GCE_METADATA_IP env var to the pod, which libraries
+			// will use to detect that they are running on GCP
+			if len(pod.Spec.Containers[0].Env) == 0 {
+				patches = append(patches, kubernetes.PatchOperation{
+					Op:   "add",
+					Path: fmt.Sprintf("/spec/containers/%d/env", i),
+					Value: []corev1.EnvVar{
+						{
+							Name:  "GCE_METADATA_IP",
+							Value: kubernetes.GetOurServiceIp(),
+						},
+					},
+				})
+			} else {
+				patches = append(patches, kubernetes.PatchOperation{
+					Op:   "add",
+					Path: fmt.Sprintf("/spec/containers/%d/env/-", i),
+					Value: corev1.EnvVar{
+						Name:  "GCE_METADATA_IP",
+						Value: kubernetes.GetOurServiceIp(),
+					},
+				})
 			}
 
 		}

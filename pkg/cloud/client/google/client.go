@@ -162,9 +162,7 @@ func GetServiceAccountToken(email string) *Token {
 
 	return &Token{
 		AccessToken: token.AccessToken,
-		// Pretend the token expires 15 minutes before it actually does
-		// to avoid caching from returning a just-about-to-expire token
-		ExpiresAt: token.ExpireTime.AsTime().UTC().Add(-15 * time.Minute),
+		ExpiresAt:   token.ExpireTime.AsTime().UTC(),
 	}
 }
 

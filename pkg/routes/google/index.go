@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
 	"github.com/magnm/lcm/pkg/routes/util"
+	"golang.org/x/exp/slog"
 )
 
 func Routes() *chi.Mux {
@@ -24,6 +25,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 func verifyRequestHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		slog.Debug("google metadata request", "path", r.URL.Path)
 		// Check Metadata-Flavor
 		header := r.Header.Get("Metadata-Flavor")
 		if header != "Google" {

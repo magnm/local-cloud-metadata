@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi"
+	"github.com/go-chi/render"
 	"github.com/magnm/lcm/config"
 	googleclient "github.com/magnm/lcm/pkg/cloud/client/google"
 	"github.com/magnm/lcm/pkg/kubernetes"
@@ -21,6 +22,18 @@ type cachedServiceAccountToken struct {
 
 var podServiceAccountCache = map[string]string{}
 var serviceAccountTokenCache = map[string]cachedServiceAccountToken{}
+
+type recursiveServiceAccountResponse struct {
+	Aliases []string `json:"aliases"`
+	Email   string   `json:"email"`
+	Scopes  []string `json:"scopes"`
+}
+
+type tokenResponse struct {
+	AccessToken string `json:"access_token"`
+	ExpiresIn   int    `json:"expires_in"`
+	TokenType   string `json:"token_type"`
+}
 
 func serviceAccounts(w http.ResponseWriter, r *http.Request) {
 	accountEmail := serviceAccountForPod(w, r)
@@ -41,14 +54,29 @@ func serviceAccounts(w http.ResponseWriter, r *http.Request) {
 }
 
 func serviceAccount(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Query().Get("recursive") == "true" {
+		serviceAccountRecursive(w, r)
+		return
+	}
+
 	paths := []string{
 		"aliases",
 		"email",
 		"identity",
 		"scopes",
 		"token",
+		"", // Empty line at the end matches GCP behavior
 	}
 	writeText(w, r, strings.Join(paths, "\n"))
+}
+
+func serviceAccountRecursive(w http.ResponseWriter, r *http.Request) {
+	response := recursiveServiceAccountResponse{
+		Aliases: []string{"default"},
+		Email:   serviceAccountForPod(w, r),
+		Scopes:  googleclient.TokenScopes,
+	}
+	render.JSON(w, r, response)
 }
 
 func serviceAccountAttr(w http.ResponseWriter, r *http.Request) {
@@ -103,10 +131,16 @@ func serviceAccountAttr(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		serviceAccountTokenCache[accountEmail] = cachedServiceAccountToken{
-			token:     token.AccessToken,
-			expiresAt: token.ExpiresAt.Unix(),
+			token: token.AccessToken,
+			// Pretend the token expires 15 minutes before it actually does
+			// to avoid caching from returning a just-about-to-expire token
+			expiresAt: token.ExpiresAt.Add(-15 * time.Minute).Unix(),
 		}
-		writeText(w, r, token.AccessToken)
+		render.JSON(w, r, tokenResponse{
+			AccessToken: token.AccessToken,
+			ExpiresIn:   int(token.ExpiresAt.Sub(time.Now().UTC()).Seconds()),
+			TokenType:   "Bearer",
+		})
 	}
 }
 
