@@ -25,6 +25,7 @@ func GetGsaForKsa(ksa *corev1.ServiceAccount) string {
 	}
 
 	if !config.Current.KsaVerifyBinding {
+		slog.Debug("Found gsa annotation on ksa", "ksa", ksa.Name, "gsa", gcpServiceAccount)
 		return gcpServiceAccount
 	}
 
