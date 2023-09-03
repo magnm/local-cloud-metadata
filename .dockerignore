@@ -1,3 +1,5 @@
 Dockerfile
 README.md
 .vcode
+k8s/
+demo/

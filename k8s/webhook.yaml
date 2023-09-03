@@ -3,15 +3,15 @@ kind: MutatingWebhookConfiguration
 metadata:
   name: local-cloud-metadata
   annotations:
-    cert-manager.io/inject-ca-from: default/lcm-webhook
+    cert-manager.io/inject-ca-from: kube-system/lcm-webhook
 webhooks:
-- name: lc-metadata.default.svc
+- name: lc-metadata.kube-system.svc
   admissionReviewVersions:
   - v1
   clientConfig:
     service:
       name: lc-metadata
-      namespace: default
+      namespace: kube-system
       path: /webhook/mutate
       port: 443
   rules:
@@ -27,11 +27,11 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: lcm-webook
-  namespace: default
+  namespace: kube-system
 spec:
   secretName: lcm-webhook
   dnsNames:
-  - lc-metadata.default.svc
-  - lc-metadata.default.svc.cluster.local
+  - lc-metadata.kube-system.svc
+  - lc-metadata.kube-system.svc.cluster.local
   issuerRef:
     name: letsencrypt
