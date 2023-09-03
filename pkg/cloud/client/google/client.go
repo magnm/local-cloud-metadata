@@ -127,7 +127,7 @@ func GetMainAccountAccessToken() string {
 	return token.AccessToken
 }
 
-func GetServiceAccountToken(email string) *Token {
+func GetServiceAccountToken(email string, scopes []string) *Token {
 	slog.Debug("getting service account token", "email", email)
 	ctx := context.Background()
 
@@ -146,9 +146,13 @@ func GetServiceAccountToken(email string) *Token {
 	}
 	defer client.Close()
 
+	if len(scopes) == 0 {
+		scopes = TokenScopes
+	}
+
 	token, err := client.GenerateAccessToken(ctx, &iamcredentialspb.GenerateAccessTokenRequest{
 		Name:  "projects/-/serviceAccounts/" + email,
-		Scope: TokenScopes,
+		Scope: scopes,
 		Lifetime: &durationpb.Duration{
 			Seconds: 3600,
 		},

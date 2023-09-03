@@ -125,7 +125,9 @@ func serviceAccountAttr(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		token := googleclient.GetServiceAccountToken(accountEmail)
+		customScopes := strings.Split(r.URL.Query().Get("scopes"), ",")
+
+		token := googleclient.GetServiceAccountToken(accountEmail, customScopes)
 		if token == nil {
 			http.Error(w, "failed to get access token", http.StatusInternalServerError)
 			return
