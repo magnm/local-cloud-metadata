@@ -24,6 +24,7 @@ func Run() {
 	}
 	config.Current = cfg
 
+	setupLogging(cfg)
 	router := routes.MainRouter(cfg)
 
 	errChan := make(chan error, 1)

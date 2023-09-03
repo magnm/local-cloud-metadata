@@ -22,6 +22,7 @@ type Config struct {
 	TlsKey           string             `env:"TLS_KEY"`
 	Name             string             `env:"NAME" envDefault:"lc-metadata"`
 	Type             MetadataType       `env:"TYPE" envDefault:"google"`
+	LogLevel         string             `env:"LOG_LEVEL" envDefault:"info"`
 	ProjectId        string             `env:"PROJECT_ID,notEmpty"`
 	CloudKeyfile     string             `env:"CLOUD_KEYFILE"`
 	KsaResolver      KsaBindingResolver `env:"KSA_RESOLVER" envDefault:"annotation"`
