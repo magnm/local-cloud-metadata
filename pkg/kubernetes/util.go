@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/magnm/lcm/config"
 	kubeclient "github.com/magnm/lcm/pkg/kubernetes/client"
 	"github.com/magnm/lcm/pkg/util"
 	"golang.org/x/exp/slog"
@@ -29,6 +30,7 @@ type RegistryAuthEntry struct {
 }
 
 var podCache = map[string]*corev1.Pod{}
+var ourServiceIp string
 
 func CallingPod(r *http.Request) (*corev1.Pod, error) {
 	ip := util.RequestIp(r)
@@ -131,4 +133,27 @@ func CreateImagePullSecret(name string, namespace string, registryAuth RegistryA
 	}
 
 	return CreateSecret(secret)
+}
+
+func GetOurServiceIp() string {
+	if ourServiceIp != "" {
+		return ourServiceIp
+	}
+
+	client, err := kubeclient.GetKubernetesClient()
+	if err != nil {
+		slog.Error("error getting kubernetes client", "err", err)
+		return ""
+	}
+
+	name := config.Current.Name
+
+	service, err := client.CoreV1().Services("").Get(context.Background(), name, metav1.GetOptions{})
+	if err != nil {
+		slog.Error("error finding service", "err", err)
+		return ""
+	}
+
+	ourServiceIp = service.Spec.ClusterIP
+	return ourServiceIp
 }

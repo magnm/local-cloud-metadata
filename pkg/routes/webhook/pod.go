@@ -44,5 +44,18 @@ func patchesForPod(pod *corev1.Pod, dryRun bool) ([]kubernetes.PatchOperation, e
 		}
 	}
 
+	// Add a DNS entry for the metadata server to the pod
+	if config.Current.Type == config.GoogleMetadata {
+		patch := kubernetes.PatchOperation{
+			Op:   "add",
+			Path: "/spec/hostAliases/-",
+			Value: corev1.HostAlias{
+				IP:        kubernetes.GetOurServiceIp(),
+				Hostnames: []string{kubegoogle.MetadataServerDomain},
+			},
+		}
+		patches = append(patches, patch)
+	}
+
 	return patches, nil
 }

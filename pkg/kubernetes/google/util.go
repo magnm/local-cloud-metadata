@@ -14,6 +14,7 @@ import (
 )
 
 var GCPServiceAccountAnnotation = "iam.gke.io/gcp-service-account"
+var MetadataServerDomain = "metadata.google.internal"
 
 func GetGsaForKsa(ksa *corev1.ServiceAccount) string {
 	gcpServiceAccount, ok := ksa.GetAnnotations()[GCPServiceAccountAnnotation]
