@@ -4,12 +4,9 @@ import (
 	"net/http"
 	"strings"
 
-	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	"github.com/magnm/lcm/config"
 	googleclient "github.com/magnm/lcm/pkg/cloud/client/google"
 )
-
-var cachedProject *resourcemanagerpb.Project
 
 func project(w http.ResponseWriter, r *http.Request) {
 	paths := []string{
@@ -24,15 +21,13 @@ func projectId(w http.ResponseWriter, r *http.Request) {
 }
 
 func projectNumericId(w http.ResponseWriter, r *http.Request) {
-	if cachedProject == nil {
-		cachedProject = googleclient.GetProject(config.Current.ProjectId)
-	}
-	if cachedProject == nil {
+	project := googleclient.GetProject(config.Current.ProjectId)
+	if project == nil {
 		http.Error(w, "failed to get project", http.StatusInternalServerError)
 		return
 	}
 
-	numericId := strings.TrimPrefix(cachedProject.Name, "projects/")
+	numericId := strings.TrimPrefix(project.Name, "projects/")
 
 	writeText(w, r, numericId)
 }

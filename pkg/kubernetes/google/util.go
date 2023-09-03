@@ -24,14 +24,35 @@ func GetGsaForKsa(ksa *corev1.ServiceAccount) string {
 		return ""
 	}
 
+	if !config.Current.KsaVerifyBinding {
+		return gcpServiceAccount
+	}
+
 	// Validate that the ksa is bound to the gsa
-	// Expected member binding is "serviceAccount:project-id.svc.id.goog[ksa-namespace/ksa-name]"
+
+	// Expected default member binding is "serviceAccount:project-id.svc.id.goog[ksa-namespace/ksa-name]"
 	ksaBinding := fmt.Sprintf(
 		"serviceAccount:%s.svc.id.goog[%s/%s]",
 		config.Current.ProjectId,
 		ksa.Namespace,
 		ksa.Name,
 	)
+	// If a custom pool is set, construct the binding according to workloadIdentityFederation
+	if config.Current.Google.IdentityPool != "" {
+		project := googleclient.GetProject(config.Current.ProjectId)
+		if project == nil {
+			return ""
+		}
+		numericId := strings.TrimPrefix(project.Name, "projects/")
+
+		ksaBinding = fmt.Sprintf(
+			"principal://iam.googleapis.com/projects/%s/locations/global/workloadIdentityPools/%s/subject/%s",
+			numericId,
+			config.Current.Google.IdentityPool,
+			ksa.Name,
+		)
+	}
+
 	if !googleclient.ValidateKsaGsaBinding(ksaBinding, gcpServiceAccount) {
 		slog.Error("ksa is not bound to the gsa", "ksa", ksa.Name, "gsa", gcpServiceAccount)
 		return ""
