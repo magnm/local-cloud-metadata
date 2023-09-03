@@ -115,7 +115,7 @@ func serviceAccountForPod(w http.ResponseWriter, r *http.Request) string {
 	case config.KsaBindingResolverAnnotation:
 		slog.Debug("using annotation to resolve ksa binding", "ksa", ksa)
 
-		email := kubegoogle.GetGsaForKsa(ksa)
+		email = kubegoogle.GetGsaForKsa(ksa)
 		if email == "" {
 			slog.Error("no google service account binding found for ksa", "ksa", ksa)
 		}
