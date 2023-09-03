@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"cloud.google.com/go/iam"
 	iamadmin "cloud.google.com/go/iam/admin/apiv1"
@@ -19,6 +20,11 @@ import (
 	"google.golang.org/api/oauth2/v1"
 	"google.golang.org/api/option"
 )
+
+type Token struct {
+	AccessToken string
+	ExpiresAt   time.Time
+}
 
 var TokenScopes = []string{
 	"https://www.googleapis.com/auth/cloud-platform",
@@ -121,22 +127,22 @@ func GetMainAccountAccessToken() string {
 	return token.AccessToken
 }
 
-func GetServiceAccountAccessToken(email string) string {
-	slog.Debug("getting service account access token", "email", email)
+func GetServiceAccountToken(email string) *Token {
+	slog.Debug("getting service account token", "email", email)
 	ctx := context.Background()
 
 	// Make sure we are allowed to generate tokens
 	if !verifyTokenCreatorOnServiceAccount(email) {
 		if err := selfGrantTokenCreatorOnServiceAccount(email); err != nil {
 			slog.Error("failed to grant token creator role on service account", "err", err)
-			return ""
+			return nil
 		}
 	}
 
 	client, err := iamcredentials.NewIamCredentialsClient(ctx, authentication())
 	if err != nil {
 		slog.Error("failed to create iamcredentials client", "err", err)
-		return ""
+		return nil
 	}
 	defer client.Close()
 
@@ -149,12 +155,17 @@ func GetServiceAccountAccessToken(email string) string {
 	})
 	if err != nil {
 		slog.Error("failed to get access token", "err", err)
-		return ""
+		return nil
 	}
 
-	slog.Debug("got access token", "email", email)
+	slog.Debug("got token", "email", email)
 
-	return token.AccessToken
+	return &Token{
+		AccessToken: token.AccessToken,
+		// Pretend the token expires 15 minutes before it actually does
+		// to avoid caching from returning a just-about-to-expire token
+		ExpiresAt: token.ExpireTime.AsTime().UTC().Add(-15 * time.Minute),
+	}
 }
 
 func GetServiceAccountIdentityToken(email string, audience string) string {

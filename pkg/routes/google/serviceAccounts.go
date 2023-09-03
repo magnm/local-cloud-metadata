@@ -3,6 +3,7 @@ package google
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/magnm/lcm/config"
@@ -13,7 +14,13 @@ import (
 	"golang.org/x/exp/slog"
 )
 
+type cachedServiceAccountToken struct {
+	token     string
+	expiresAt int64
+}
+
 var podServiceAccountCache = map[string]string{}
+var serviceAccountTokenCache = map[string]cachedServiceAccountToken{}
 
 func serviceAccounts(w http.ResponseWriter, r *http.Request) {
 	accountEmail := serviceAccountForPod(w, r)
@@ -83,12 +90,23 @@ func serviceAccountAttr(w http.ResponseWriter, r *http.Request) {
 	case "scopes":
 		writeText(w, r, strings.Join(googleclient.TokenScopes, ","))
 	case "token":
-		token := googleclient.GetServiceAccountAccessToken(accountEmail)
-		if token == "" {
+		if cached, ok := serviceAccountTokenCache[accountEmail]; ok {
+			if cached.expiresAt > time.Now().UTC().Unix() {
+				writeText(w, r, cached.token)
+				return
+			}
+		}
+
+		token := googleclient.GetServiceAccountToken(accountEmail)
+		if token == nil {
 			http.Error(w, "failed to get access token", http.StatusInternalServerError)
 			return
 		}
-		writeText(w, r, token)
+		serviceAccountTokenCache[accountEmail] = cachedServiceAccountToken{
+			token:     token.AccessToken,
+			expiresAt: token.ExpiresAt.Unix(),
+		}
+		writeText(w, r, token.AccessToken)
 	}
 }
 
