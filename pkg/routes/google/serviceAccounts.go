@@ -147,7 +147,8 @@ func serviceAccountAttr(w http.ResponseWriter, r *http.Request) {
 		writeText(w, r, strings.Join(googleclient.TokenScopes, ","))
 	case "token":
 		if cached, ok := serviceAccountTokenCache[accountEmail]; ok {
-			if cached.ExpiresAt > time.Now().UTC().Unix() {
+			// Only return cached token if it expires in more than 15 minutes
+			if cached.ExpiresAt > time.Now().UTC().Add(15*time.Minute).Unix() {
 				render.JSON(w, r, tokenResponse{
 					AccessToken: cached.Token,
 					ExpiresIn:   int(cached.ExpiresAt - time.Now().UTC().Unix()),
@@ -168,10 +169,8 @@ func serviceAccountAttr(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		serviceAccountTokenCache[accountEmail] = cachedServiceAccountToken{
-			Token: token.AccessToken,
-			// Pretend the token expires 15 minutes before it actually does
-			// to avoid caching from returning a just-about-to-expire token
-			ExpiresAt: token.ExpiresAt.Add(-15 * time.Minute).Unix(),
+			Token:     token.AccessToken,
+			ExpiresAt: token.ExpiresAt.Unix(),
 		}
 		render.JSON(w, r, tokenResponse{
 			AccessToken: token.AccessToken,
