@@ -157,7 +157,10 @@ func serviceAccountAttr(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		customScopes := strings.Split(r.URL.Query().Get("scopes"), ",")
+		customScopes := []string{}
+		if scopes := r.URL.Query().Get("scopes"); scopes != "" {
+			customScopes = strings.Split(scopes, ",")
+		}
 
 		token := googleclient.GetServiceAccountToken(accountEmail, customScopes)
 		if token == nil {

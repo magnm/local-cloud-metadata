@@ -128,7 +128,7 @@ func GetMainAccountAccessToken() string {
 }
 
 func GetServiceAccountToken(email string, scopes []string) *Token {
-	slog.Debug("getting service account token", "email", email)
+	slog.Debug("getting service account token", "email", email, "scopes", scopes)
 	ctx := context.Background()
 
 	// Make sure we are allowed to generate tokens
