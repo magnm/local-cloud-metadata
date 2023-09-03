@@ -39,7 +39,12 @@ func serviceAccounts(w http.ResponseWriter, r *http.Request) {
 	accountEmail := serviceAccountForPod(w, r)
 	if accountEmail == "" {
 		slog.Error("no service account found for pod")
-		http.Error(w, "no service account found for pod", http.StatusInternalServerError)
+		http.Error(w, "Not Found", http.StatusNotFound)
+		return
+	}
+
+	if r.URL.Query().Get("recursive") == "true" {
+		serviceAccountsRecursive(w, r)
 		return
 	}
 
@@ -53,7 +58,30 @@ func serviceAccounts(w http.ResponseWriter, r *http.Request) {
 	writeText(w, r, strings.Join(accountFolders, "\n"))
 }
 
+func serviceAccountsRecursive(w http.ResponseWriter, r *http.Request) {
+	response := map[string]recursiveServiceAccountResponse{
+		"default": {
+			Aliases: []string{"default"},
+			Email:   serviceAccountForPod(w, r),
+			Scopes:  googleclient.TokenScopes,
+		},
+		serviceAccountForPod(w, r): {
+			Aliases: []string{"default"},
+			Email:   serviceAccountForPod(w, r),
+			Scopes:  googleclient.TokenScopes,
+		},
+	}
+	render.JSON(w, r, response)
+}
+
 func serviceAccount(w http.ResponseWriter, r *http.Request) {
+	accountEmail := serviceAccountForPod(w, r)
+	if accountEmail == "" {
+		slog.Error("no service account found for pod")
+		http.Error(w, "Not Found", http.StatusNotFound)
+		return
+	}
+
 	if r.URL.Query().Get("recursive") == "true" {
 		serviceAccountRecursive(w, r)
 		return
