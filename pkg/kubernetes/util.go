@@ -148,7 +148,7 @@ func GetOurServiceIp() string {
 
 	name := config.Current.Name
 
-	service, err := client.CoreV1().Services("").Get(context.Background(), name, metav1.GetOptions{})
+	service, err := client.CoreV1().Services(config.Current.LcmNamespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		slog.Error("error finding service", "err", err)
 		return ""
