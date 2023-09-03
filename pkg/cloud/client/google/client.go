@@ -23,6 +23,8 @@ var TokenScopes = []string{
 
 var IdentityWorkloadRole = "roles/iam.workloadIdentityUser"
 
+var cachedProject *resourcemanagerpb.Project
+
 func authentication() option.ClientOption {
 	if config.Current.CloudKeyfile != "" {
 		return option.WithCredentialsFile(config.Current.CloudKeyfile)
@@ -31,6 +33,10 @@ func authentication() option.ClientOption {
 }
 
 func GetProject(id string) *resourcemanagerpb.Project {
+	if cachedProject != nil {
+		return cachedProject
+	}
+
 	slog.Debug("getting google project", "id", id)
 	ctx := context.Background()
 	client, err := resourcemanager.NewProjectsClient(ctx, authentication())
@@ -44,14 +50,14 @@ func GetProject(id string) *resourcemanagerpb.Project {
 		Query: "id:" + id,
 	})
 
-	project, _ := projectIterator.Next()
-	if project == nil {
+	cachedProject, _ = projectIterator.Next()
+	if cachedProject == nil {
 		slog.Error("failed to get project", "id", id)
 	} else {
-		slog.Debug("got project", "id", id, "name", project.Name)
+		slog.Debug("got project", "id", id, "name", cachedProject.Name)
 	}
 
-	return project
+	return cachedProject
 }
 
 func ValidateKsaGsaBinding(ksaBinding string, gsa string) bool {
