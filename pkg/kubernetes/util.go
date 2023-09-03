@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -16,6 +15,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	applyv1 "k8s.io/client-go/applyconfigurations/core/v1"
+	applymetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
 )
 
 type RegistryAuth struct {
@@ -110,7 +111,21 @@ func CreateSecret(secret *corev1.Secret) error {
 		return err
 	}
 
-	_, err = client.CoreV1().Secrets(secret.Namespace).Create(context.Background(), secret, metav1.CreateOptions{})
+	_, err = client.CoreV1().Secrets(secret.Namespace).Apply(context.Background(), &applyv1.SecretApplyConfiguration{
+		TypeMetaApplyConfiguration: applymetav1.TypeMetaApplyConfiguration{
+			Kind:       &secret.Kind,
+			APIVersion: &secret.APIVersion,
+		},
+		ObjectMetaApplyConfiguration: &applymetav1.ObjectMetaApplyConfiguration{
+			Name:      &secret.Name,
+			Namespace: &secret.Namespace,
+		},
+		Type:       &secret.Type,
+		Data:       secret.Data,
+		StringData: secret.StringData,
+	}, metav1.ApplyOptions{
+		FieldManager: config.Current.Name,
+	})
 	return err
 }
 
@@ -119,16 +134,16 @@ func CreateImagePullSecret(name string, namespace string, registryAuth RegistryA
 	if err != nil {
 		return err
 	}
-	base64Encoded := base64.StdEncoding.EncodeToString(jsonEncoded)
 
 	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
 		Type: corev1.SecretTypeDockerConfigJson,
-		Data: map[string][]byte{
-			".dockerconfigjson": []byte(base64Encoded),
+		StringData: map[string]string{
+			".dockerconfigjson": string(jsonEncoded),
 		},
 	}
 

@@ -37,9 +37,11 @@ func patchesForPod(pod *corev1.Pod, dryRun bool) ([]kubernetes.PatchOperation, e
 
 				if len(pod.Spec.ImagePullSecrets) == 0 {
 					patches = append(patches, kubernetes.PatchOperation{
-						Op:    "add",
-						Path:  "/spec/imagePullSecrets",
-						Value: []string{secretReference.Name},
+						Op:   "add",
+						Path: "/spec/imagePullSecrets",
+						Value: []corev1.LocalObjectReference{
+							{Name: secretReference.Name},
+						},
 					})
 				} else {
 					patches = append(patches, kubernetes.PatchOperation{
