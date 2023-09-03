@@ -33,12 +33,19 @@ func patchesForPod(pod *corev1.Pod, dryRun bool) ([]kubernetes.PatchOperation, e
 					return nil, err
 				}
 
-				patch := kubernetes.PatchOperation{
-					Op:    "add",
-					Path:  "/spec/imagePullSecrets/-",
-					Value: secretReference.Name,
+				if len(pod.Spec.ImagePullSecrets) == 0 {
+					patches = append(patches, kubernetes.PatchOperation{
+						Op:    "add",
+						Path:  "/spec/imagePullSecrets",
+						Value: []string{secretReference.Name},
+					})
+				} else {
+					patches = append(patches, kubernetes.PatchOperation{
+						Op:    "add",
+						Path:  "/spec/imagePullSecrets/-",
+						Value: secretReference.Name,
+					})
 				}
-				patches = append(patches, patch)
 			}
 
 		}
@@ -46,15 +53,27 @@ func patchesForPod(pod *corev1.Pod, dryRun bool) ([]kubernetes.PatchOperation, e
 
 	// Add a DNS entry for the metadata server to the pod
 	if config.Current.Type == config.GoogleMetadata {
-		patch := kubernetes.PatchOperation{
-			Op:   "add",
-			Path: "/spec/hostAliases/-",
-			Value: corev1.HostAlias{
-				IP:        kubernetes.GetOurServiceIp(),
-				Hostnames: []string{kubegoogle.MetadataServerDomain},
-			},
+		if len(pod.Spec.HostAliases) == 0 {
+			patches = append(patches, kubernetes.PatchOperation{
+				Op:   "add",
+				Path: "/spec/hostAliases",
+				Value: []corev1.HostAlias{
+					{
+						IP:        kubernetes.GetOurServiceIp(),
+						Hostnames: []string{kubegoogle.MetadataServerDomain},
+					},
+				},
+			})
+		} else {
+			patches = append(patches, kubernetes.PatchOperation{
+				Op:   "add",
+				Path: "/spec/hostAliases/-",
+				Value: corev1.HostAlias{
+					IP:        kubernetes.GetOurServiceIp(),
+					Hostnames: []string{kubegoogle.MetadataServerDomain},
+				},
+			})
 		}
-		patches = append(patches, patch)
 	}
 
 	return patches, nil
