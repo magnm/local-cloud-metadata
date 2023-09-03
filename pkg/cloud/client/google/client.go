@@ -2,6 +2,8 @@ package google
 
 import (
 	"context"
+	"errors"
+	"strings"
 
 	"cloud.google.com/go/iam"
 	iamadmin "cloud.google.com/go/iam/admin/apiv1"
@@ -14,6 +16,7 @@ import (
 	"github.com/magnm/lcm/config"
 	"golang.org/x/exp/slog"
 	google "golang.org/x/oauth2/google"
+	"google.golang.org/api/oauth2/v1"
 	"google.golang.org/api/option"
 )
 
@@ -22,15 +25,10 @@ var TokenScopes = []string{
 }
 
 var IdentityWorkloadRole = "roles/iam.workloadIdentityUser"
+var TokenCreatorRole = "roles/iam.serviceAccountTokenCreator"
 
 var cachedProject *resourcemanagerpb.Project
-
-func authentication() option.ClientOption {
-	if config.Current.CloudKeyfile != "" {
-		return option.WithCredentialsFile(config.Current.CloudKeyfile)
-	}
-	return option.WithTelemetryDisabled()
-}
+var serviceAccountPermissionCache = map[string]bool{}
 
 func GetProject(id string) *resourcemanagerpb.Project {
 	if cachedProject != nil {
@@ -91,6 +89,22 @@ func ValidateKsaGsaBinding(ksaBinding string, gsa string) bool {
 	return false
 }
 
+func GetMainAccount() string {
+	slog.Debug("getting main account")
+	ctx := context.Background()
+	client, err := oauth2.NewService(ctx, authentication())
+	if err != nil {
+		slog.Error("failed to create oauth2 client", "err", err)
+		return ""
+	}
+	resp, err := client.Tokeninfo().Do()
+	if err != nil {
+		slog.Error("failed to get userinfo", "err", err)
+		return ""
+	}
+	return resp.Email
+}
+
 func GetMainAccountAccessToken() string {
 	slog.Debug("getting main account access token")
 	ctx := context.Background()
@@ -110,6 +124,14 @@ func GetMainAccountAccessToken() string {
 func GetServiceAccountAccessToken(email string) string {
 	slog.Debug("getting service account access token", "email", email)
 	ctx := context.Background()
+
+	// Make sure we are allowed to generate tokens
+	if !verifyTokenCreatorOnServiceAccount(email) {
+		if err := selfGrantTokenCreatorOnServiceAccount(email); err != nil {
+			slog.Error("failed to grant token creator role on service account", "err", err)
+			return ""
+		}
+	}
 
 	client, err := iamcredentials.NewIamCredentialsClient(ctx, authentication())
 	if err != nil {
@@ -139,6 +161,14 @@ func GetServiceAccountIdentityToken(email string, audience string) string {
 	slog.Debug("getting service account identity token", "email", email, "audience", audience)
 	ctx := context.Background()
 
+	// Make sure we are allowed to generate tokens
+	if !verifyTokenCreatorOnServiceAccount(email) {
+		if err := selfGrantTokenCreatorOnServiceAccount(email); err != nil {
+			slog.Error("failed to grant token creator role on service account", "err", err)
+			return ""
+		}
+	}
+
 	client, err := iamcredentials.NewIamCredentialsClient(ctx, authentication())
 	if err != nil {
 		slog.Error("failed to create iamcredentials client", "err", err)
@@ -158,4 +188,95 @@ func GetServiceAccountIdentityToken(email string, audience string) string {
 	slog.Debug("got identity token", "email", email, "audience", audience)
 
 	return token.Token
+}
+
+func authentication() option.ClientOption {
+	if config.Current.CloudKeyfile != "" {
+		return option.WithCredentialsFile(config.Current.CloudKeyfile)
+	}
+	return option.WithTelemetryDisabled()
+}
+
+func verifyTokenCreatorOnServiceAccount(email string) bool {
+	if val, ok := serviceAccountPermissionCache[email]; ok {
+		return val
+	}
+
+	slog.Debug("verifying token creator role on service account", "email", email)
+	ctx := context.Background()
+
+	client, err := iamadmin.NewIamClient(ctx, authentication())
+	if err != nil {
+		slog.Error("failed to create iam client", "err", err)
+		return false
+	}
+	defer client.Close()
+
+	permissions, err := client.TestIamPermissions(ctx, &iampb.TestIamPermissionsRequest{
+		Resource: "projects/-/serviceAccounts/" + email,
+		Permissions: []string{
+			"iam.serviceAccounts.getAccessToken",
+		},
+	})
+	if err != nil {
+		slog.Error("failed to test iam permissions", "err", err)
+		return false
+	}
+
+	if len(permissions.Permissions) == 0 {
+		slog.Warn("token creator role not granted on service account", "email", email)
+		return false
+	}
+
+	slog.Debug("verified token creator role on service account", "email", email)
+	serviceAccountPermissionCache[email] = true
+
+	return true
+}
+
+func selfGrantTokenCreatorOnServiceAccount(email string) error {
+	slog.Debug("granting token creator role on service account", "email", email)
+	ctx := context.Background()
+
+	client, err := iamadmin.NewIamClient(ctx, authentication())
+	if err != nil {
+		slog.Error("failed to create iam client", "err", err)
+		return err
+	}
+	defer client.Close()
+
+	existingPolicy, err := client.GetIamPolicy(ctx, &iampb.GetIamPolicyRequest{
+		Resource: "projects/-/serviceAccounts/" + email,
+	})
+	if err != nil {
+		slog.Error("failed to get existing iam policy", "err", err)
+	}
+
+	mainAccount := GetMainAccount()
+	if mainAccount == "" {
+		return errors.New("failed to get main account")
+	}
+
+	principal := mainAccount
+	if strings.HasSuffix(principal, "gserviceaccount.com") {
+		principal = "serviceAccount:" + principal
+	} else {
+		principal = "user:" + principal
+	}
+
+	slog.Debug("adding token creator role to main account", "principal", principal)
+	existingPolicy.Add(principal, iam.RoleName(TokenCreatorRole))
+
+	_, err = client.SetIamPolicy(ctx, &iamadmin.SetIamPolicyRequest{
+		Resource: "projects/-/serviceAccounts/" + email,
+		Policy:   existingPolicy,
+	})
+	if err != nil {
+		slog.Error("failed to set iam policy", "err", err)
+		return err
+	}
+
+	slog.Debug("granted token creator role on service account", "email", email, "principal", principal)
+	serviceAccountPermissionCache[email] = true
+	return nil
 }
