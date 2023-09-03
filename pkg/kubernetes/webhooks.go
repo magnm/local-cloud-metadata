@@ -25,11 +25,11 @@ var deserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDese
  * DecodePodMutationRequest decodes a pod mutation request from the http request body.
  * Returns the pod, a boolean indicating if the request is a dry run, and an error if any.
  */
-func DecodePodMutationRequest(r *http.Request) (*corev1.Pod, bool, error) {
+func DecodePodMutationRequest(r *http.Request) (*admissionv1.AdmissionReview, *corev1.Pod, error) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		slog.Error("failed to read request body", "err", err)
-		return nil, false, err
+		return nil, nil, err
 	}
 
 	admissionReview := &admissionv1.AdmissionReview{}
@@ -37,26 +37,24 @@ func DecodePodMutationRequest(r *http.Request) (*corev1.Pod, bool, error) {
 	_, _, err = deserializer.Decode(body, nil, admissionReview)
 	if err != nil {
 		slog.Error("failed to decode admission request", "err", err)
-		return nil, false, err
+		return nil, nil, err
 	} else if admissionReview == nil || admissionReview.Request == nil {
 		slog.Error("admission request is nil")
-		return nil, false, errors.New("admission request is nil")
+		return nil, nil, errors.New("admission request is nil")
 	}
-	slog.Debug("admission review", "name", admissionReview.Request.Name)
-
-	dryRun := admissionReview.Request.DryRun
+	slog.Debug("admission review", "uid", admissionReview.Request.UID)
 
 	var pod corev1.Pod
 	err = json.Unmarshal(admissionReview.Request.Object.Raw, &pod)
 	if err != nil {
 		slog.Error("failed to decode pod resource", "err", err)
-		return nil, false, err
+		return nil, nil, err
 	}
 
-	return &pod, *dryRun, nil
+	return admissionReview, &pod, nil
 }
 
-func EncodeMutationPatches(patches []PatchOperation) (*admissionv1.AdmissionReview, error) {
+func EncodeMutationPatches(review *admissionv1.AdmissionReview, patches []PatchOperation) (*admissionv1.AdmissionReview, error) {
 	patchBytes, err := json.Marshal(patches)
 	if err != nil {
 		return nil, err
@@ -64,7 +62,9 @@ func EncodeMutationPatches(patches []PatchOperation) (*admissionv1.AdmissionRevi
 
 	patchType := admissionv1.PatchTypeJSONPatch
 	response := &admissionv1.AdmissionReview{
+		TypeMeta: review.TypeMeta,
 		Response: &admissionv1.AdmissionResponse{
+			UID:       review.Request.UID,
 			Allowed:   true,
 			Patch:     patchBytes,
 			PatchType: &patchType,

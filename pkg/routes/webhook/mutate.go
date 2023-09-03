@@ -1,7 +1,6 @@
 package webhook
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi"
@@ -18,34 +17,28 @@ func Routes() *chi.Mux {
 
 func handleRequest(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("admission request", "length", r.ContentLength)
-	podRequest, dryRun, err := kubernetes.DecodePodMutationRequest(r)
+	review, pod, err := kubernetes.DecodePodMutationRequest(r)
 	if err != nil {
 		slog.Error("failed to decode pod mutation request", "err", err)
 		http.Error(w, "failed to decode pod mutation request", http.StatusBadRequest)
 		return
 	}
+	slog.Debug("admission review", "version", review.APIVersion)
 
-	patches, err := patchesForPod(podRequest, dryRun)
+	patches, err := patchesForPod(pod, *review.Request.DryRun)
 	if err != nil {
 		slog.Error("failed to generate patches for pod", "err", err)
 		http.Error(w, "failed to generate patches for pod", http.StatusInternalServerError)
 		return
 	}
 
-	response, err := kubernetes.EncodeMutationPatches(patches)
+	response, err := kubernetes.EncodeMutationPatches(review, patches)
 	if err != nil {
 		slog.Error("failed to encode mutation patches", "err", err)
 		http.Error(w, "failed to encode mutation patches", http.StatusInternalServerError)
 		return
 	}
-	slog.Debug("admission response", "response", response)
+	slog.Debug("admission response", "patches", patches)
 
-	bytes, err := json.Marshal(response)
-	if err != nil {
-		slog.Error("failed to marshal admission response", "err", err)
-		http.Error(w, "failed to marshal admission response", http.StatusInternalServerError)
-		return
-	}
-
-	render.Data(w, r, bytes)
+	render.JSON(w, r, response)
 }
