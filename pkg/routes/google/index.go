@@ -1,48 +1,21 @@
 package google
 
 import (
-	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
-	"github.com/samber/lo"
+	"github.com/magnm/lcm/pkg/routes/util"
 )
 
 func Routes() *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(verifyRequestHeaders)
-	r.Get("/", redirectTo("/computeMetadata/v1/"))
-	r.Get("/computeMetadata", redirectTo("/computeMetadata/v1/"))
-	r.Get("/computeMetadata/v1", redirectTo("/computeMetadata/v1/"))
+	r.Get("/", util.RedirectTo("/computeMetadata/v1/"))
+	r.Get("/computeMetadata", util.RedirectTo("/computeMetadata/v1/"))
+	r.Get("/computeMetadata/v1", util.RedirectTo("/computeMetadata/v1/"))
 	r.Route("/computeMetadata/v1/", computeMetadataRoutes)
 	return r
-}
-
-func redirectTo(path string) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		patterns := lo.Map(chi.RouteContext(r.Context()).RoutePatterns, func(pattern string, i int) string {
-			return strings.ReplaceAll(pattern, "/*", "")
-		})
-		initialPath := strings.Join(lo.Slice(patterns, 0, len(patterns)-1), "/")
-		http.Redirect(w, r, initialPath+path, http.StatusPermanentRedirect)
-	}
-}
-
-func redirectToKey(path string, keys []string) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		resolvedPath := path
-		for _, key := range keys {
-			value := chi.URLParam(r, key)
-			resolvedPath = strings.ReplaceAll(resolvedPath, fmt.Sprintf("{%s}", key), value)
-		}
-		patterns := lo.Map(chi.RouteContext(r.Context()).RoutePatterns, func(pattern string, i int) string {
-			return strings.ReplaceAll(pattern, "/*", "")
-		})
-		initialPath := strings.Join(lo.Slice(patterns, 0, len(patterns)-1), "/")
-		http.Redirect(w, r, initialPath+resolvedPath, http.StatusPermanentRedirect)
-	}
 }
 
 func verifyRequestHeaders(next http.Handler) http.Handler {
