@@ -16,8 +16,8 @@ import (
 )
 
 type cachedServiceAccountToken struct {
-	token     string
-	expiresAt int64
+	Token     string
+	ExpiresAt int64
 }
 
 var podServiceAccountCache = map[string]string{}
@@ -147,8 +147,12 @@ func serviceAccountAttr(w http.ResponseWriter, r *http.Request) {
 		writeText(w, r, strings.Join(googleclient.TokenScopes, ","))
 	case "token":
 		if cached, ok := serviceAccountTokenCache[accountEmail]; ok {
-			if cached.expiresAt > time.Now().UTC().Unix() {
-				writeText(w, r, cached.token)
+			if cached.ExpiresAt > time.Now().UTC().Unix() {
+				render.JSON(w, r, tokenResponse{
+					AccessToken: cached.Token,
+					ExpiresIn:   int(cached.ExpiresAt - time.Now().UTC().Unix()),
+					TokenType:   "Bearer",
+				})
 				return
 			}
 		}
@@ -161,10 +165,10 @@ func serviceAccountAttr(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		serviceAccountTokenCache[accountEmail] = cachedServiceAccountToken{
-			token: token.AccessToken,
+			Token: token.AccessToken,
 			// Pretend the token expires 15 minutes before it actually does
 			// to avoid caching from returning a just-about-to-expire token
-			expiresAt: token.ExpiresAt.Add(-15 * time.Minute).Unix(),
+			ExpiresAt: token.ExpiresAt.Add(-15 * time.Minute).Unix(),
 		}
 		render.JSON(w, r, tokenResponse{
 			AccessToken: token.AccessToken,
