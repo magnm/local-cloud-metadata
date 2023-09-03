@@ -18,9 +18,9 @@ func patchesForPod(pod *corev1.Pod, dryRun bool) ([]kubernetes.PatchOperation, e
 			continue
 		}
 
-		image, err := reference.ParseNamed(container.Image)
+		image, err := reference.ParseNormalizedNamed(container.Image)
 		if err != nil {
-			slog.Error("failed to parse image tag", "err", err)
+			slog.Error("failed to parse image tag", "tag", container.Image, "err", err)
 			return nil, err
 		}
 

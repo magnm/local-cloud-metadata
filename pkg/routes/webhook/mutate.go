@@ -12,11 +12,12 @@ import (
 
 func Routes() *chi.Mux {
 	r := chi.NewRouter()
-	r.Get("/mutate", handleRequest)
+	r.Post("/mutate", handleRequest)
 	return r
 }
 
 func handleRequest(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("admission request", "length", r.ContentLength)
 	podRequest, dryRun, err := kubernetes.DecodePodMutationRequest(r)
 	if err != nil {
 		slog.Error("failed to decode pod mutation request", "err", err)

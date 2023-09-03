@@ -32,17 +32,17 @@ func DecodePodMutationRequest(r *http.Request) (*corev1.Pod, bool, error) {
 		return nil, false, err
 	}
 
-	var admissionReview *admissionv1.AdmissionReview
+	admissionReview := &admissionv1.AdmissionReview{}
 
 	_, _, err = deserializer.Decode(body, nil, admissionReview)
 	if err != nil {
 		slog.Error("failed to decode admission request", "err", err)
 		return nil, false, err
-	} else if admissionReview.Request == nil {
+	} else if admissionReview == nil || admissionReview.Request == nil {
 		slog.Error("admission request is nil")
 		return nil, false, errors.New("admission request is nil")
 	}
-	slog.Debug("admission review", "review", admissionReview)
+	slog.Debug("admission review", "name", admissionReview.Request.Name)
 
 	dryRun := admissionReview.Request.DryRun
 
