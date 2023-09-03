@@ -1,5 +1,6 @@
 
 resources:
+  - tls-secret.yaml
   - service-account.yaml
   - webhook.yaml
   - deployment.yaml

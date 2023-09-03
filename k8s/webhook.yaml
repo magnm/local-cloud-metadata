@@ -2,36 +2,26 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   name: local-cloud-metadata
-  annotations:
-    cert-manager.io/inject-ca-from: kube-system/lcm-webhook
 webhooks:
 - name: lc-metadata.kube-system.svc
   admissionReviewVersions:
   - v1
   clientConfig:
+    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJmekNDQVRHZ0F3SUJBZ0lVV0lCbmd4UG9laHRBcG93Zk5ld0wrZkNXVjdzd0JRWURLMlZ3TURReEN6QUoKQmdOVkJBWVRBazVQTVFzd0NRWURWUVFJREFKT1R6RUxNQWtHQTFVRUJ3d0NUazh4Q3pBSkJnTlZCQW9NQWs1UApNQ0FYRFRJek1Ea3dNekU1TURFd05Wb1lEekl3TlRFd01URTVNVGt3TVRBMVdqQTBNUXN3Q1FZRFZRUUdFd0pPClR6RUxNQWtHQTFVRUNBd0NUazh4Q3pBSkJnTlZCQWNNQWs1UE1Rc3dDUVlEVlFRS0RBSk9UekFxTUFVR0F5dGwKY0FNaEFDUDJPWDJxK3NZZTlOZzZmTnlIMlJZc2xhTnR6c3hobi9wRzRlaFA3dkxWbzFNd1VUQWRCZ05WSFE0RQpGZ1FVWUpnZW9rZnRNSjdha1FTSDFnVFBlZTUwYXFVd0h3WURWUjBqQkJnd0ZvQVVZSmdlb2tmdE1KN2FrUVNICjFnVFBlZTUwYXFVd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pBRkJnTXJaWEFEUVFBY2lVVGE4ZlRGN3dkcm1EZkYKZFhuUFluSVpFc1BLUHF1VjNpYWxWeW1SWjI4bWcyZGk2ZWpmM1hBRHpHcTNDY09OM2RlcFdFelNaQ1lZT3NlYgpNZ2NICi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
     service:
       name: lc-metadata
       namespace: kube-system
       path: /webhook/mutate
       port: 443
+  objectSelector:
+    matchExpressions:
+    - key: app
+      operator: NotIn
+      values:
+      - lc-metadata
   rules:
   - operations: [ "CREATE", "UPDATE" ]
     apiGroups: [""]
     apiVersions: ["v1"]
     resources: ["pods"]
   sideEffects: NoneOnDryRun
-
----
-
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: lcm-webook
-  namespace: kube-system
-spec:
-  secretName: lcm-webhook
-  dnsNames:
-  - lc-metadata.kube-system.svc
-  - lc-metadata.kube-system.svc.cluster.local
-  issuerRef:
-    name: letsencrypt
