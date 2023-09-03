@@ -40,9 +40,9 @@ func Run() {
 
 	// Start the http server
 	go func() {
-		fmt.Printf("http server listening on port %s\n", cfg.Port)
+		slog.Info("http server listening", "port", cfg.Port)
 		if err := srv.ListenAndServe(); err != nil {
-			fmt.Printf("server error: %s\n", err)
+			slog.Info("server error", "err", err)
 			errChan <- err
 		}
 	}()
@@ -56,9 +56,9 @@ func Run() {
 			WriteTimeout: 10 * time.Second,
 		}
 		go func() {
-			fmt.Printf("https server listening on port %s\n", cfg.TlsPort)
+			slog.Info("https server listening", "port", cfg.TlsPort)
 			if err := tlsSrv.ListenAndServeTLS(cfg.TlsCert, cfg.TlsKey); err != nil {
-				fmt.Printf("Server error: %s\n", err)
+				slog.Info("Server error", "err", err)
 				errChan <- err
 			}
 		}()
@@ -69,7 +69,7 @@ func Run() {
 		slog.Error("server error", "err", err)
 		os.Exit(1)
 	case <-stopChan:
-		fmt.Println("server stopping")
+		slog.Info("server stopping")
 	}
 
 	// Give the server 5 seconds to shutdown gracefully
