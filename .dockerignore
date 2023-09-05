@@ -1,6 +1,7 @@
 Dockerfile
 README.md
-.vcode
+.vcode/
+.git/
 k8s/
 demo/
 tls/
