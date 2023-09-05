@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  REGISTRY_IMAGE: ghcr.io/lcm:v1
+  REGISTRY_IMAGE: ghcr.io/magnm/lcm:v1
 
 jobs:
   build:
