@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lc-metadata
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: lc-metadata
+  template:
+    metadata:
+      labels:
+        app: lc-metadata
+    spec:
+      containers:
+        - name: lc-metadata
+          image: lcm
+          imagePullPolicy: Never
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 10m
+          ports:
+            - containerPort: 8080
+            - containerPort: 8443
+          volumeMounts:
+            - name: google-credentials
+              mountPath: /adc.json
+              readOnly: true
+            - name: tls-cert
+              mountPath: /tls
+              readOnly: true
+          env:
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /adc.json
+            - name: PROJECT_ID
+              value: ${LCM_PROJECT_ID:-changeme}
+            - name: TLS_CERT
+              value: /tls/tls.crt
+            - name: TLS_KEY
+              value: /tls/tls.key
+            - name: KSA_VERIFY_BINDING
+              value: "false"
+            - name: LOG_LEVEL
+              value: debug
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      volumes:
+        - name: google-credentials
+          hostPath:
+            type: File
+            path: /gcloud/application_default_credentials.json
+        - name: tls-cert
+          secret:
+            secretName: lc-metadata-tls
+
+      serviceAccountName: lc-metadata
