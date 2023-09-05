@@ -14,8 +14,8 @@ spec:
     spec:
       containers:
         - name: lc-metadata
-          image: lcm
-          imagePullPolicy: Never
+          image: ghcr.io/magnm/lcm:v1
+          imagePullPolicy: Always
           resources:
             requests:
               memory: 64Mi
