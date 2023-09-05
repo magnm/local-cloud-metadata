@@ -34,7 +34,7 @@ spec:
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: /adc.json
             - name: PROJECT_ID
-              value: ${LCM_PROJECT_ID:-changeme}
+              value: $LCM_PROJECT_ID
             - name: TLS_CERT
               value: /tls/tls.crt
             - name: TLS_KEY
