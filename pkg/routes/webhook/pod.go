@@ -52,7 +52,7 @@ func patchesForPod(pod *corev1.Pod, dryRun bool) ([]kubernetes.PatchOperation, e
 				}
 			}
 
-			// Add GCE_METADATA_IP env var to the pod, which libraries
+			// Add GCE_METADATA_IP/HOST env var to the pod, which libraries
 			// will use to detect that they are running on GCP
 			if len(pod.Spec.Containers[0].Env) == 0 {
 				patches = append(patches, kubernetes.PatchOperation{
@@ -63,6 +63,10 @@ func patchesForPod(pod *corev1.Pod, dryRun bool) ([]kubernetes.PatchOperation, e
 							Name:  "GCE_METADATA_IP",
 							Value: kubernetes.GetOurServiceIp(),
 						},
+						{
+							Name:  "GCE_METADATA_HOST",
+							Value: "http://metadata.google.internal",
+						},
 					},
 				})
 			} else {
@@ -72,6 +76,14 @@ func patchesForPod(pod *corev1.Pod, dryRun bool) ([]kubernetes.PatchOperation, e
 					Value: corev1.EnvVar{
 						Name:  "GCE_METADATA_IP",
 						Value: kubernetes.GetOurServiceIp(),
+					},
+				})
+				patches = append(patches, kubernetes.PatchOperation{
+					Op:   "add",
+					Path: fmt.Sprintf("/spec/containers/%d/env/-", i),
+					Value: corev1.EnvVar{
+						Name:  "GCE_METADATA_HOST",
+						Value: "http://metadata.google.internal",
 					},
 				})
 			}
