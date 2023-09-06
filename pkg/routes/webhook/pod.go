@@ -65,7 +65,7 @@ func patchesForPod(pod *corev1.Pod, dryRun bool) ([]kubernetes.PatchOperation, e
 						},
 						{
 							Name:  "GCE_METADATA_HOST",
-							Value: "http://metadata.google.internal",
+							Value: "metadata.google.internal",
 						},
 					},
 				})
@@ -83,7 +83,7 @@ func patchesForPod(pod *corev1.Pod, dryRun bool) ([]kubernetes.PatchOperation, e
 					Path: fmt.Sprintf("/spec/containers/%d/env/-", i),
 					Value: corev1.EnvVar{
 						Name:  "GCE_METADATA_HOST",
-						Value: "http://metadata.google.internal",
+						Value: "metadata.google.internal",
 					},
 				})
 			}
