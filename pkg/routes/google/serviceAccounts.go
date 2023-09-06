@@ -211,6 +211,12 @@ func serviceAccountForPod(w http.ResponseWriter, r *http.Request) string {
 		slog.Error("using CRD to resolve ksa binding is not implemented", "ksa", ksa)
 	}
 
+	// Verify that this service account is permitted to be used
+	if !googleclient.IsServiceAccountPermitted(email) {
+		slog.Error("service account is not permitted", "ksa", ksa, "gsa", email)
+		return ""
+	}
+
 	if email != "" {
 		podServiceAccountCache[pod.Name] = email
 	}

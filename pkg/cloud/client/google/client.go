@@ -3,6 +3,7 @@ package google
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -93,6 +94,27 @@ func ValidateKsaGsaBinding(ksaBinding string, gsa string) bool {
 	slog.Warn("invalid ksa gsa binding", "ksaBinding", ksaBinding, "gsa", gsa)
 
 	return false
+}
+
+func IsServiceAccountPermitted(email string) bool {
+	// Empty email is not an error/not-permitted here.
+	// Likewise, if AllowOtherProjects is turned on,
+	// any account is permitted.
+	if email == "" || config.Current.AllowOtherProjects {
+		return true
+	}
+
+	project := GetProject(config.Current.ProjectId)
+	if project == nil {
+		slog.Error("unable to permit service account, failed to get project", "id", config.Current.ProjectId)
+		return false
+	}
+
+	parts := strings.SplitN(email, "@", 2)
+	// We'll allow only regular service account emails, same project
+	expectedDomain := fmt.Sprintf("%s.iam.gserviceaccount.com", project.ProjectId)
+
+	return len(parts) == 2 && parts[1] == expectedDomain
 }
 
 func GetMainAccount() string {
