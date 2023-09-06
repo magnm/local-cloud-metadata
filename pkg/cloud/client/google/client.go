@@ -263,6 +263,7 @@ func selfGrantTokenCreatorOnServiceAccount(email string) error {
 	})
 	if err != nil {
 		slog.Error("failed to get existing iam policy", "err", err)
+		return err
 	}
 
 	mainAccount := GetMainAccount()
