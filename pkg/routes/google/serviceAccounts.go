@@ -187,6 +187,15 @@ func serviceAccountForPod(w http.ResponseWriter, r *http.Request) string {
 		return ""
 	}
 
+	// If the pod is using the default kubernetes service account,
+	// and LCM has a default cloud service account configured,
+	// we should just always return the default.
+	if (pod.Spec.ServiceAccountName == "" ||
+		pod.Spec.ServiceAccountName == "default") &&
+		config.Current.DefaultAccount != "" {
+		return config.Current.DefaultAccount
+	}
+
 	if email, ok := podServiceAccountCache[pod.Name]; ok {
 		return email
 	}

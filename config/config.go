@@ -25,6 +25,7 @@ type Config struct {
 	LogLevel           string             `env:"LOG_LEVEL" envDefault:"info"`
 	ProjectId          string             `env:"PROJECT_ID,notEmpty"`
 	CloudKeyfile       string             `env:"CLOUD_KEYFILE"`
+	DefaultAccount     string             `env:"DEFAULT_ACCOUNT"`
 	AllowOtherProjects bool               `env:"ALLOW_OTHER_PROJECTS" envDefault:"false"`
 	LcmNamespace       string             `env:"LCM_NAMESPACE" envDefault:"kube-system"`
 	KsaResolver        KsaBindingResolver `env:"KSA_RESOLVER" envDefault:"annotation"`
