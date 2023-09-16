@@ -35,6 +35,8 @@ spec:
               value: /adc.json
             - name: PROJECT_ID
               value: $LCM_PROJECT_ID
+            - name: DEFAULT_ACCOUNT
+              value: $LCM_DEFAULT_ACCOUNT
             - name: TLS_CERT
               value: /tls/tls.crt
             - name: TLS_KEY
