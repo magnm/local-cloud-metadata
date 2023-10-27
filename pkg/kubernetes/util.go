@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/magnm/lcm/config"
 	kubeclient "github.com/magnm/lcm/pkg/kubernetes/client"
@@ -35,7 +36,20 @@ var ourServiceIp string
 
 func CallingPod(r *http.Request) (*corev1.Pod, error) {
 	ip := util.RequestIp(r)
+	pod, err := resolveCallingPod(ip)
+	if err != nil {
+		slog.Error("no pod found for ip on first try", "ip", ip)
 
+		// Try a second time after 2 seconds, in case the pod was just created
+		time.Sleep(2 * time.Second)
+
+		return resolveCallingPod(ip)
+	}
+
+	return pod, nil
+}
+
+func resolveCallingPod(ip string) (*corev1.Pod, error) {
 	// Check cache first before looking up in kube api
 	if pod, ok := podCache[ip]; ok {
 		return pod, nil
@@ -53,11 +67,10 @@ func CallingPod(r *http.Request) (*corev1.Pod, error) {
 		return nil, err
 	}
 	if len(podList.Items) == 0 {
-		slog.Error("no pod found for ip", "ip", ip)
 		return nil, errorv1.NewNotFound(corev1.Resource("Pod"), ip)
 	}
-	pod := podList.Items[0]
 
+	pod := podList.Items[0]
 	podCache[ip] = &pod
 
 	return &pod, nil
