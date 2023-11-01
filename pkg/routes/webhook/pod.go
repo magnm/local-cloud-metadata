@@ -13,7 +13,10 @@ import (
 )
 
 func patchesForPod(pod *corev1.Pod, dryRun bool) ([]kubernetes.PatchOperation, error) {
-	var patches []kubernetes.PatchOperation
+	var (
+		patches []kubernetes.PatchOperation
+		err     error
+	)
 
 	var dnsEntries []corev1.HostAlias
 	var envVars []corev1.EnvVar
@@ -30,75 +33,17 @@ func patchesForPod(pod *corev1.Pod, dryRun bool) ([]kubernetes.PatchOperation, e
 		}
 	}
 
-	// Check if we should add imagePullSecret
+	// Check if we should add imagePullSecret or envVars
 	for i, container := range pod.Spec.Containers {
-		if container.ImagePullPolicy == corev1.PullNever {
-			continue
-		}
-
-		image, err := reference.ParseNormalizedNamed(container.Image)
+		patches, err = patchesForContainer(patches, envVars, "containers", pod, container, i, dryRun)
 		if err != nil {
-			slog.Error("failed to parse image tag", "tag", container.Image, "err", err)
 			return nil, err
 		}
-
-		var pullSecretRef *corev1.LocalObjectReference
-
-		switch config.Current.Type {
-		case config.GoogleMetadata:
-			if kubegoogle.ShouldAddImagePullSecret(image) {
-				pullSecretRef, err = kubegoogle.PullSecretForImage(image, pod.Namespace, dryRun)
-				if err != nil {
-					slog.Error("failed to create image pull secret", "err", err)
-					return nil, err
-				}
-			}
-		}
-
-		if pullSecretRef != nil {
-			if len(pod.Spec.ImagePullSecrets) == 0 {
-				patches = append(patches, kubernetes.PatchOperation{
-					Op:   "add",
-					Path: "/spec/imagePullSecrets",
-					Value: []corev1.LocalObjectReference{
-						{Name: pullSecretRef.Name},
-					},
-				})
-			} else {
-				if !lo.ContainsBy(pod.Spec.ImagePullSecrets, func(secret corev1.LocalObjectReference) bool {
-					return secret.Name == pullSecretRef.Name
-				}) {
-					patches = append(patches, kubernetes.PatchOperation{
-						Op:   "add",
-						Path: "/spec/imagePullSecrets/-",
-						Value: []corev1.LocalObjectReference{
-							{Name: pullSecretRef.Name},
-						},
-					})
-				}
-			}
-		}
-
-		if len(envVars) > 0 {
-			if len(pod.Spec.Containers[i].Env) == 0 {
-				patches = append(patches, kubernetes.PatchOperation{
-					Op:    "add",
-					Path:  fmt.Sprintf("/spec/containers/%d/env", i),
-					Value: envVars,
-				})
-			} else {
-				for _, env := range envVars {
-					if !lo.ContainsBy(pod.Spec.Containers[i].Env, func(e corev1.EnvVar) bool {
-						return e.Name == env.Name
-					}) {
-						patches = append(patches, kubernetes.PatchOperation{
-							Op:    "add",
-							Path:  fmt.Sprintf("/spec/containers/%d/env/-", i),
-							Value: env,
-						})
-					}
-				}
-			}
+	}
+	for i, initContainer := range pod.Spec.InitContainers {
+		patches, err = patchesForContainer(patches, envVars, "initContainers", pod, initContainer, i, dryRun)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -118,6 +63,87 @@ func patchesForPod(pod *corev1.Pod, dryRun bool) ([]kubernetes.PatchOperation, e
 						Op:    "add",
 						Path:  "/spec/hostAliases/-",
 						Value: dnsEntry,
+					})
+				}
+			}
+		}
+	}
+
+	return patches, nil
+}
+
+func patchesForContainer(
+	patches []kubernetes.PatchOperation,
+	envVars []corev1.EnvVar,
+	containerTypeJsonPath string,
+	pod *corev1.Pod,
+	container corev1.Container,
+	index int,
+	dryRun bool,
+) ([]kubernetes.PatchOperation, error) {
+	if container.ImagePullPolicy == corev1.PullNever {
+		return patches, nil
+	}
+
+	image, err := reference.ParseNormalizedNamed(container.Image)
+	if err != nil {
+		slog.Error("failed to parse image tag", "tag", container.Image, "err", err)
+		return nil, err
+	}
+
+	var pullSecretRef *corev1.LocalObjectReference
+
+	switch config.Current.Type {
+	case config.GoogleMetadata:
+		if kubegoogle.ShouldAddImagePullSecret(image) {
+			pullSecretRef, err = kubegoogle.PullSecretForImage(image, pod.Namespace, dryRun)
+			if err != nil {
+				slog.Error("failed to create image pull secret", "err", err)
+				return nil, err
+			}
+		}
+	}
+
+	if pullSecretRef != nil {
+		if len(pod.Spec.ImagePullSecrets) == 0 {
+			patches = append(patches, kubernetes.PatchOperation{
+				Op:   "add",
+				Path: "/spec/imagePullSecrets",
+				Value: []corev1.LocalObjectReference{
+					{Name: pullSecretRef.Name},
+				},
+			})
+		} else {
+			if !lo.ContainsBy(pod.Spec.ImagePullSecrets, func(secret corev1.LocalObjectReference) bool {
+				return secret.Name == pullSecretRef.Name
+			}) {
+				patches = append(patches, kubernetes.PatchOperation{
+					Op:   "add",
+					Path: "/spec/imagePullSecrets/-",
+					Value: []corev1.LocalObjectReference{
+						{Name: pullSecretRef.Name},
+					},
+				})
+			}
+		}
+	}
+
+	if len(envVars) > 0 {
+		if len(pod.Spec.Containers[index].Env) == 0 {
+			patches = append(patches, kubernetes.PatchOperation{
+				Op:    "add",
+				Path:  fmt.Sprintf("/spec/%s/%d/env", containerTypeJsonPath, index),
+				Value: envVars,
+			})
+		} else {
+			for _, env := range envVars {
+				if !lo.ContainsBy(pod.Spec.Containers[index].Env, func(e corev1.EnvVar) bool {
+					return e.Name == env.Name
+				}) {
+					patches = append(patches, kubernetes.PatchOperation{
+						Op:    "add",
+						Path:  fmt.Sprintf("/spec/%s/%d/env/-", containerTypeJsonPath, index),
+						Value: env,
 					})
 				}
 			}
