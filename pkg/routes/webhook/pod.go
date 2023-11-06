@@ -131,8 +131,8 @@ func patchesForContainer(
 				patches = append(patches, kubernetes.PatchOperation{
 					Op:   "add",
 					Path: "/spec/imagePullSecrets/-",
-					Value: []corev1.LocalObjectReference{
-						{Name: pullSecretRef.Name},
+					Value: corev1.LocalObjectReference{
+						Name: pullSecretRef.Name,
 					},
 				})
 			}
