@@ -212,8 +212,9 @@ func GetServiceAccountIdentityToken(email string, audience string) string {
 	defer client.Close()
 
 	token, err := client.GenerateIdToken(ctx, &iamcredentialspb.GenerateIdTokenRequest{
-		Name:     "projects/-/serviceAccounts/" + email,
-		Audience: audience,
+		Name:         "projects/-/serviceAccounts/" + email,
+		Audience:     audience,
+		IncludeEmail: true,
 	})
 	if err != nil {
 		slog.Error("failed to get identity token", "err", err)
