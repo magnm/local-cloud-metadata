@@ -105,18 +105,29 @@ func patchesForContainer(
 	}
 
 	if pullSecretRef != nil {
-		if len(pod.Spec.ImagePullSecrets) == 0 {
-			patches = append(patches, kubernetes.PatchOperation{
-				Op:   "add",
-				Path: "/spec/imagePullSecrets",
-				Value: []corev1.LocalObjectReference{
-					{Name: pullSecretRef.Name},
-				},
-			})
-		} else {
-			if !lo.ContainsBy(pod.Spec.ImagePullSecrets, func(secret corev1.LocalObjectReference) bool {
-				return secret.Name == pullSecretRef.Name
-			}) {
+		patchesContainInitialSecret := lo.ContainsBy(patches, func(patch kubernetes.PatchOperation) bool {
+			return patch.Path == "/spec/imagePullSecrets"
+		})
+		patchesContainSameSecret := lo.ContainsBy(patches, func(patch kubernetes.PatchOperation) bool {
+			if obj, ok := patch.Value.(corev1.LocalObjectReference); ok {
+				return obj.Name == pullSecretRef.Name
+			}
+			return false
+		})
+		podContainsInitialSecret := len(pod.Spec.ImagePullSecrets) > 0
+		podContainSameSecret := lo.ContainsBy(pod.Spec.ImagePullSecrets, func(secret corev1.LocalObjectReference) bool {
+			return secret.Name == pullSecretRef.Name
+		})
+		if !podContainSameSecret && !patchesContainSameSecret {
+			if !podContainsInitialSecret && !patchesContainInitialSecret {
+				patches = append(patches, kubernetes.PatchOperation{
+					Op:   "add",
+					Path: "/spec/imagePullSecrets",
+					Value: []corev1.LocalObjectReference{
+						{Name: pullSecretRef.Name},
+					},
+				})
+			} else {
 				patches = append(patches, kubernetes.PatchOperation{
 					Op:   "add",
 					Path: "/spec/imagePullSecrets/-",
