@@ -140,7 +140,13 @@ func patchesForContainer(
 	}
 
 	if len(envVars) > 0 {
-		if len(pod.Spec.Containers[index].Env) == 0 {
+		var existingEnvs []corev1.EnvVar
+		if containerTypeJsonPath == "initContainers" {
+			existingEnvs = pod.Spec.InitContainers[index].Env
+		} else {
+			existingEnvs = pod.Spec.Containers[index].Env
+		}
+		if len(existingEnvs) == 0 {
 			patches = append(patches, kubernetes.PatchOperation{
 				Op:    "add",
 				Path:  fmt.Sprintf("/spec/%s/%d/env", containerTypeJsonPath, index),
@@ -148,7 +154,7 @@ func patchesForContainer(
 			})
 		} else {
 			for _, env := range envVars {
-				if !lo.ContainsBy(pod.Spec.Containers[index].Env, func(e corev1.EnvVar) bool {
+				if !lo.ContainsBy(existingEnvs, func(e corev1.EnvVar) bool {
 					return e.Name == env.Name
 				}) {
 					patches = append(patches, kubernetes.PatchOperation{
